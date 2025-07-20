@@ -7,7 +7,19 @@
     <title>Vite App</title>
   </head>
   <body>
-    <div id="app"></div>
+    <button id="themeToggle" class="theme-toggle">☀️</button>
+    <div class="todo-container">
+      <h1>My To-Do List</h1>
+
+      <div class="input-section">
+          <input type="text" id="todoInput" class="todo-input" placeholder="Write smth">
+          <button id="addTodoButton" class="add-button">Add</button>
+      </div>
+
+      <ul id="todoList" class="todo-list">
+      </ul>
+      <p id="emptyMessage" class="empty-message">No to-do items yet. Start by adding one!</p>
+  </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
