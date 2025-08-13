@@ -1,168 +1,158 @@
-import "./main.css"
+import "./main.css";
 
-const todoInput = document.getElementById('todoInput');
-const addTodoButton = document.getElementById('addTodoButton');
-const todoList = document.getElementById('todoList');
-const emptyMessage = document.getElementById('emptyMessage');
-const messageBox = document.getElementById('messageBox')
-const themeToggle = document.getElementById('themeToggle');
+const els = {
+  todoInput: document.getElementById("todoInput"),
+  addBtn: document.getElementById("addTodoButton"),
+  todoList: document.getElementById("todoList"),
+  emptyMsg: document.getElementById("emptyMessage"),
+  msgBox: document.getElementById("messageBox"),
+  themeToggle: document.getElementById("themeToggle"),
+};
 
- let todos = [];
+let todos = JSON.parse(localStorage.getItem("todos")) || [];
+let theme = localStorage.getItem("theme") || "dark";
 
-  function showMessage(msg) {
-    messageBox.textContent = msg;
-    messageBox.classList.add('show');
-    setTimeout(() => {
-    messageBox.classList.remove('show');
-  }, 3000); 
- }
-  function renderTodos() {
-    todoList.innerHTML = ''; 
-      if (todos.length === 0) {
-          emptyMessage.style.display = 'block'; 
-      } else {
-         emptyMessage.style.display = 'none'; 
-         todos.forEach(todo => {
-const listItem = document.createElement('li');
-  listItem.className = 'todo-item'; 
-  if (todo.isEditing) {
-    const editInput = document.createElement('input');
-    editInput.type = 'text';
-    editInput.className = 'edit-input';
-    editInput.value = todo.text;
-    setTimeout(() => {
-        editInput.focus();
-        editInput.select();
-    }, 0);
-
-  
-    editInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleSaveEdit(todo.id, editInput.value);
-        }
-    });
-
-    const saveButton = document.createElement('button');
-    saveButton.className = 'save-button';
-    saveButton.textContent = 'Save';
-    saveButton.onclick = () => handleSaveEdit(todo.id, editInput.value);
-
-    listItem.appendChild(editInput);
-    listItem.appendChild(saveButton);
-} else {
-    const todoTextSpan = document.createElement('span');
-    todoTextSpan.className = 'todo-text';
-    todoTextSpan.textContent = todo.text;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'todo-actions';
-
-    const editButton = document.createElement('button');
-    editButton.className = 'edit-button';
-    editButton.textContent = 'Edit';
-    editButton.onclick = () => handleEditTodo(todo.id);
-
-    const deleteButton = document.createElement('button');
-    deleteButton.className = 'delete-button';
-    deleteButton.textContent = 'Delete';
-    deleteButton.onclick = () => handleDeleteTodo(todo.id);
-
-    actionsDiv.appendChild(editButton);
-    actionsDiv.appendChild(deleteButton);
-
-    listItem.appendChild(todoTextSpan);
-    listItem.appendChild(actionsDiv);
-}
-todoList.appendChild(listItem);
-});
-}
+// === UTILITIES ===
+function saveState() {
+  localStorage.setItem("todos", JSON.stringify(todos));
 }
 
-function handleAddTodo() {
-const inputValue = todoInput.value.trim();
-if (inputValue !== '') {
-const isAnyEditing = todos.some(todo => todo.isEditing);
-if (isAnyEditing) {
-showMessage('Please save or cancel your current edit before adding a new item.');
-return;
+function showMessage(msg) {
+  els.msgBox.textContent = msg;
+  els.msgBox.classList.add("show");
+  setTimeout(() => els.msgBox.classList.remove("show"), 3000);
 }
 
-todos.push({ id: Date.now(), text: inputValue, isEditing: false });
-todoInput.value = ''; 
-renderTodos(); 
-showMessage('To-do item added!');
-} else {
-showMessage('Please write something to add!');
-}
-}
-
-
-function handleEditTodo(id) {
-const currentlyEditingTodo = todos.find(todo => todo.isEditing);
-if (currentlyEditingTodo && currentlyEditingTodo.id !== id) {
-
-const editInput = todoList.querySelector('.edit-input'); 
-if (editInput) {
-handleSaveEdit(currentlyEditingTodo.id, editInput.value);
-}
-}
-
-const updatedTodos = todos.map(todo => {
-return todo.id === id ? { ...todo, isEditing: true } : { ...todo, isEditing: false };
-});
-todos = updatedTodos;
-renderTodos();
-}
-
-function handleSaveEdit(id, newText) {
-const trimmedText = newText.trim();
-if (trimmedText !== '') {
-todos = todos.map(todo =>
-todo.id === id ? { ...todo, text: trimmedText, isEditing: false } : todo
-);
-renderTodos();
-showMessage('To-do item updated!');
-} else {
-showMessage('To-do item cannot be empty!');
-}
-}
-
-function handleDeleteTodo(id) {
-const isAnyEditing = todos.some(todo => todo.isEditing);
-if (isAnyEditing) {
-showMessage('Please save or cancel your current edit before deleting an item.');
-return;
-}
-
-todos = todos.filter(todo => todo.id !== id);
-renderTodos(); 
-showMessage('To-do item deleted!');
+function setTheme(mode) {
+  document.body.classList.toggle("light-mode", mode === "light");
+  els.themeToggle.textContent = mode === "light" ? "🌙" : "☀️";
+  localStorage.setItem("theme", mode);
 }
 
 function toggleTheme() {
-document.body.classList.toggle('light-mode');
-
-if (document.body.classList.contains('light-mode')) {
-themeToggle.textContent = '🌙'; 
-showMessage('Switched to Light Mode');
-} else {
-themeToggle.textContent = '☀️'; 
-showMessage('Switched to Dark Mode');
-}
+  theme = theme === "light" ? "dark" : "light";
+  setTheme(theme);
+  showMessage(`Switched to ${theme === "light" ? "Light" : "Dark"} Mode`);
 }
 
-addTodoButton.addEventListener('click', handleAddTodo);
-todoInput.addEventListener('keypress', (e) => {
-if (e.key === 'Enter') {
-handleAddTodo();
+// === RENDER ===
+function renderTodos() {
+  els.todoList.innerHTML = "";
+  if (!todos.length) {
+    els.emptyMsg.style.display = "block";
+    return;
+  }
+  els.emptyMsg.style.display = "none";
+
+  const fragment = document.createDocumentFragment();
+  todos.forEach((todo) => {
+    const li = document.createElement("li");
+    li.className = "todo-item";
+
+    if (todo.isEditing) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "edit-input";
+      input.value = todo.text;
+      input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") handleSaveEdit(todo.id, input.value);
+        if (e.key === "Escape") cancelEdit(todo.id);
+      });
+      input.focus();
+
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "save-button";
+      saveBtn.textContent = "Save";
+      saveBtn.onclick = () => handleSaveEdit(todo.id, input.value);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "cancel-button";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.onclick = () => cancelEdit(todo.id);
+
+      li.append(input, saveBtn, cancelBtn);
+    } else {
+      const span = document.createElement("span");
+      span.className = "todo-text";
+      span.textContent = todo.text;
+
+      const actions = document.createElement("div");
+      actions.className = "todo-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-button";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = () => handleEdit(todo.id);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "delete-button";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = () => handleDelete(todo.id);
+
+      actions.append(editBtn, delBtn);
+      li.append(span, actions);
+    }
+    fragment.appendChild(li);
+  });
+  els.todoList.appendChild(fragment);
 }
+
+// === ACTIONS ===
+function handleAdd() {
+  const text = els.todoInput.value.trim();
+  if (!text) return showMessage("Please write something to add!");
+
+  if (todos.some((t) => t.isEditing))
+    return showMessage("Finish editing before adding new item.");
+
+  todos.push({ id: Date.now(), text, isEditing: false });
+  els.todoInput.value = "";
+  saveState();
+  renderTodos();
+  showMessage("To-do item added!");
+}
+
+function handleEdit(id) {
+  todos = todos.map((t) => ({ ...t, isEditing: t.id === id }));
+  renderTodos();
+}
+
+function handleSaveEdit(id, text) {
+  const trimmed = text.trim();
+  if (!trimmed) return showMessage("To-do item cannot be empty!");
+  todos = todos.map((t) =>
+    t.id === id ? { ...t, text: trimmed, isEditing: false } : t
+  );
+  saveState();
+  renderTodos();
+  showMessage("To-do item updated!");
+}
+
+function cancelEdit(id) {
+  todos = todos.map((t) => ({ ...t, isEditing: false }));
+  renderTodos();
+}
+
+function handleDelete(id) {
+  if (todos.some((t) => t.isEditing))
+    return showMessage("Finish editing before deleting.");
+
+  todos = todos.filter((t) => t.id !== id);
+  saveState();
+  renderTodos();
+  showMessage("To-do item deleted!");
+}
+
+// === EVENT BINDINGS ===
+els.addBtn.addEventListener("click", handleAdd);
+els.todoInput.addEventListener(
+  "keypress",
+  (e) => e.key === "Enter" && handleAdd()
+);
+els.themeToggle.addEventListener("click", toggleTheme);
+
+// === INIT ===
+document.addEventListener("DOMContentLoaded", () => {
+  setTheme(theme);
+  renderTodos();
 });
-themeToggle.addEventListener('click', toggleTheme);
-
-
-
-document.addEventListener('DOMContentLoaded', () => {
-renderTodos();
-});
-
-  
